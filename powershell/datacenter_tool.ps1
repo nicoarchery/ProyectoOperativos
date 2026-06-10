@@ -3,7 +3,7 @@
 $ScriptVersion = "1.0.0"
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# --- Helpers -----------------------------------------------------------------
 
 function Format-Bytes {
     param([long]$Bytes)
@@ -29,7 +29,7 @@ function Get-UserRid {
 }
 
 
-# ─── Menu ─────────────────────────────────────────────────────────────────────
+# --- Menu --------------------------------------------------------------------
 
 function Show-Menu {
     Clear-Host
@@ -38,9 +38,9 @@ function Show-Menu {
     Write-Host $border
     Write-Host " Data Center Administration Tool - PowerShell v$ScriptVersion"
     Write-Host $border
-    Write-Host " 1. Usuarios del sistema y último login"
+    Write-Host " 1. Usuarios del sistema y ultimo login"
     Write-Host " 2. Filesystems / Discos conectados"
-    Write-Host " 3. Archivos más grandes en un filesystem"
+    Write-Host " 3. Archivos mas grandes en un filesystem"
     Write-Host " 4. Memoria libre y swap"
     Write-Host " 5. Backup de directorio a USB"
     Write-Host $half
@@ -50,13 +50,13 @@ function Show-Menu {
 }
 
 
-# ─── Opción 1: Usuarios y último login ────────────────────────────────────────
+# --- Opcion 1: Usuarios y ultimo login ---------------------------------------
 
 function Invoke-Option1 {
     Write-Host ("=" * 48)
-    Write-Host " USUARIOS DEL SISTEMA Y ÚLTIMO LOGIN"
+    Write-Host " USUARIOS DEL SISTEMA Y ULTIMO LOGIN"
     Write-Host ("=" * 48)
-    Write-Host ("{0,-25} {1,-22} {2}" -f "USUARIO", "ÚLTIMO LOGIN", "PUERTO/SESIÓN")
+    Write-Host ("{0,-25} {1,-22} {2}" -f "USUARIO", "ULTIMO LOGIN", "PUERTO/SESION")
     Write-Host ("-" * 48)
 
     try {
@@ -78,7 +78,7 @@ function Invoke-Option1 {
                 $lastLogonStr = $lastLogon.ToString("yyyy-MM-dd HH:mm:ss")
             }
             else {
-                $lastLogonStr = "Nunca ingresó"
+                $lastLogonStr = "Nunca ingreso"
             }
 
             Write-Host ("{0,-25} {1,-22} {2}" -f $u.Name, $lastLogonStr, "-")
@@ -93,7 +93,7 @@ function Invoke-Option1 {
 }
 
 
-# ─── Opción 2: Filesystems / Discos ──────────────────────────────────────────
+# --- Opcion 2: Filesystems / Discos ------------------------------------------
 
 function Invoke-Option2 {
     Write-Host ("=" * 48)
@@ -104,7 +104,7 @@ function Invoke-Option2 {
         $disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction Stop |
             Sort-Object DeviceID
 
-        Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMAÑO (bytes)", "ESPACIO LIBRE", "ETIQUETA")
+        Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMANO (bytes)", "ESPACIO LIBRE", "ETIQUETA")
         Write-Host ("-" * 72)
 
         foreach ($d in $disks) {
@@ -120,7 +120,7 @@ function Invoke-Option2 {
 
         $netDrives = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=4" -ErrorAction SilentlyContinue
         if ($netDrives) {
-            Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMAÑO (bytes)", "ESPACIO LIBRE", "RUTA")
+            Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMANO (bytes)", "ESPACIO LIBRE", "RUTA")
             Write-Host ("-" * 72)
             foreach ($d in $netDrives) {
                 $size  = if ($d.Size)  { $d.Size.ToString("N0") }  else { "N/A" }
@@ -142,11 +142,11 @@ function Invoke-Option2 {
 }
 
 
-# ─── Opción 3: 10 archivos más grandes ────────────────────────────────────────
+# --- Opcion 3: 10 archivos mas grandes ---------------------------------------
 
 function Invoke-Option3 {
     Write-Host ("=" * 48)
-    Write-Host " 10 ARCHIVOS MÁS GRANDES"
+    Write-Host " 10 ARCHIVOS MAS GRANDES"
     Write-Host ("=" * 48)
 
     $target = Read-Host "Ingrese el punto de montaje o directorio a analizar"
@@ -168,7 +168,7 @@ function Invoke-Option3 {
     Write-Host "Esto puede tardar si el filesystem contiene muchos archivos."
     Write-Host ""
 
-    Write-Host ("{0,-6} {1,-20} {2}" -f "No.", "TAMAÑO (bytes)", "RUTA COMPLETA")
+    Write-Host ("{0,-6} {1,-20} {2}" -f "No.", "TAMANO (bytes)", "RUTA COMPLETA")
     Write-Host ("-" * 80)
 
     try {
@@ -196,7 +196,7 @@ function Invoke-Option3 {
 }
 
 
-# ─── Opción 4: Memoria libre y swap ──────────────────────────────────────────
+# --- Opcion 4: Memoria libre y swap ------------------------------------------
 
 function Invoke-Option4 {
     Write-Host ("=" * 48)
@@ -230,14 +230,14 @@ function Invoke-Option4 {
         Write-Host ("  Usado:  {0,-16} ({1,15:N0} bytes)  ({2,5:N1}%)" -f (Format-Bytes $usedMem), $usedMem, $usedMemPct)
 
         Write-Host ""
-        Write-Host " SWAP (Archivo de paginación)"
+        Write-Host " SWAP (Archivo de paginacion)"
         if ($totalSwap -gt 0) {
             Write-Host ("  Total:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $totalSwap), $totalSwap)
             Write-Host ("  Libre:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $freeSwap),  $freeSwap)
             Write-Host ("  Usado:  {0,-16} ({1,15:N0} bytes)  ({2,5:N1}%)" -f (Format-Bytes $usedSwap), $usedSwap, $usedSwapPct)
         }
         else {
-            Write-Host "  No hay archivo de paginación configurado."
+            Write-Host "  No hay archivo de paginacion configurado."
         }
 
         Write-Host ""
@@ -258,7 +258,7 @@ function Invoke-Option4 {
 }
 
 
-# ─── Opción 5: Backup a USB ──────────────────────────────────────────────────
+# --- Opcion 5: Backup a USB --------------------------------------------------
 
 function Get-UsbMountPoints {
     $result = @()
@@ -315,7 +315,7 @@ function Select-UsbMount {
         $script:SelectedUsbMount  = $usbEntries[0].MountPoint
         $script:SelectedUsbDevice = "Disco $($usbEntries[0].DiskNumber)"
         $script:SelectedUsbSize   = $usbEntries[0].SizeStr
-        Write-Host ("USB detectada automáticamente: {0} ({1}, {2})" -f $SelectedUsbMount, $SelectedUsbDevice, $SelectedUsbSize)
+        Write-Host ("USB detectada automaticamente: {0} ({1}, {2})" -f $SelectedUsbMount, $SelectedUsbDevice, $SelectedUsbSize)
         return $true
     }
 
@@ -325,10 +325,11 @@ function Select-UsbMount {
     }
 
     $choice = Read-Host ("Seleccione el destino [1-{0}]" -f $usbEntries.Count)
-    $index = [int]::TryParse($choice, [ref]0) ? [int]$choice - 1 : -1
+    $parsed = [int]::TryParse($choice, [ref]0)
+    $index = if ($parsed) { [int]$choice - 1 } else { -1 }
 
     if ($index -lt 0 -or $index -ge $usbEntries.Count) {
-        Write-Host "Error: selección inválida." -ForegroundColor Red
+        Write-Host "Error: seleccion invalida." -ForegroundColor Red
         return $false
     }
 
@@ -340,7 +341,7 @@ function Select-UsbMount {
 
 function Invoke-Option5 {
     Write-Host ("=" * 48)
-    Write-Host " BACKUP A USB CON CATÁLOGO CSV"
+    Write-Host " BACKUP A USB CON CATALOGO CSV"
     Write-Host ("=" * 48)
 
     if (-not (Select-UsbMount)) {
@@ -366,14 +367,14 @@ function Invoke-Option5 {
     $sourceDir = [System.IO.Path]::GetFullPath($sourceDir)
 
     if (-not (Test-Path -LiteralPath $SelectedUsbMount -PathType Container)) {
-        Write-Host "Error: el montaje USB detectado no es una ruta válida." -ForegroundColor Red
+        Write-Host "Error: el montaje USB detectado no es una ruta valida." -ForegroundColor Red
         Write-Host ""
         return
     }
 
     if ($SelectedUsbMount.StartsWith($sourceDir, [StringComparison]::OrdinalIgnoreCase)) {
-        Write-Host "Error: la USB destino está dentro del directorio origen." -ForegroundColor Red
-        Write-Host "Eso produciría copias recursivas. Seleccione un origen que no contenga la USB." -ForegroundColor Red
+        Write-Host "Error: la USB destino esta dentro del directorio origen." -ForegroundColor Red
+        Write-Host "Eso produciria copias recursivas. Seleccione un origen que no contenga la USB." -ForegroundColor Red
         Write-Host ""
         return
     }
@@ -399,25 +400,25 @@ function Invoke-Option5 {
         Copy-Item -Path "$sourceDir\*" -Destination $backupData -Recurse -Container -ErrorAction Stop
     }
     catch {
-        Write-Host "Error: falló la copia de archivos: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error: fallo la copia de archivos: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""
         return
     }
 
-    Write-Host "Generando catálogo CSV..."
+    Write-Host "Generando catalogo CSV..."
     try {
         $catalog = Get-ChildItem -LiteralPath $sourceDir -Recurse -File -ErrorAction SilentlyContinue |
             ForEach-Object {
                 [PSCustomObject]@{
-                    archivo           = $_.FullName.Substring($sourceDir.Length).TrimStart('\')
-                    ultima_modificacion = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                    archivo              = $_.FullName.Substring($sourceDir.Length).TrimStart('\')
+                    ultima_modificacion  = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
                 }
             } |
             Sort-Object archivo
         $catalog | Export-Csv -LiteralPath $catalogFile -Encoding UTF8 -NoTypeInformation -Delimiter ','
     }
     catch {
-        Write-Host "Error: no se pudo generar el catálogo: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error: no se pudo generar el catalogo: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""
         return
     }
@@ -427,17 +428,17 @@ function Invoke-Option5 {
     Write-Host ("USB destino:       {0} ({1})" -f $SelectedUsbMount, $SelectedUsbDevice)
     Write-Host ("Directorio backup: {0}" -f $backupRoot)
     Write-Host ("Archivos copiados: {0}" -f $backupData)
-    Write-Host ("Catálogo CSV:      {0}" -f $catalogFile)
+    Write-Host ("Catalogo CSV:      {0}" -f $catalogFile)
     Write-Host ""
 }
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# --- Main --------------------------------------------------------------------
 
 function Main {
     do {
         Show-Menu
-        $opcion = Read-Host " Seleccione una opción [0-5]"
+        $opcion = Read-Host " Seleccione una opcion [0-5]"
         Write-Host ""
 
         switch ($opcion) {
@@ -451,7 +452,7 @@ function Main {
                 return
             }
             default {
-                Write-Host "Opción inválida. Intente de nuevo."
+                Write-Host "Opcion invalida. Intente de nuevo."
                 Write-Host ""
             }
         }
@@ -463,6 +464,6 @@ function Main {
 }
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────────
+# --- Entry point -------------------------------------------------------------
 
 Main
