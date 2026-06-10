@@ -1,1 +1,30 @@
-El proyecto consiste en la elaboración de dosherramientas, una en Powershell y otra en BASH,que facilitenlas labores del administrador de un data center.Cada una de lasherramientasdebe desplegar un menú con las siguientes opciones:1.Desplegar los usuarios creados en el sistema, y la fecha y hora de su último ingreso (login).2.Desplegar  los  filesystems  o  discos  conectados  a  la  máquina.  Incluir  para  cada  disco  su tamaño y la cantidad de espacio libre (en bytes).3.Desplegar el nombre y el tamaño de los diez archivos más grandesalmacenadosen un disco o  filesystem  que  el  usuario  deberá  especificar. Losarchivosdebenaparecer  con  su trayectoria completa.4.Cantidad de memoria libre y cantidad del espacio de swap en uso (en bytes y porcentaje).5.Hacer  copia  de  seguridad  (backup)  de  un  directorio  especificado  a  una  memoria  USB. Además de los archivos, se debe almacenar un catálogo que contenga los nombres de los archivos y su fecha de última modificación.El profesor actuará como usuario de lasaplicaciones, y responderá preguntas relacionadas con lasmismasen horas de oficina.Deben conformar equipos de máximo trespersonas para la presentación del proyecto. Lasfechasde presentación serán las siguientes:•Grupo 3 (11 AM): 9-JUN-2026, en horas de la mañana.•Grupo 5 (2 PM): 11-JUN-2026, en horas de la mañana.El proyecto  debe  entregarse debidamente documentado  en  Github.Oportunamente  les  estaré publicando un enlace de Calendly para que reserven el turno de sustentación.
+
+# Proyecto: Herramientas de Administración para Data Center
+
+## Descripción del Proyecto
+
+El proyecto consiste en la elaboración de  **dos herramientas** , una en **PowerShell** y otra en  **BASH** , diseñadas para facilitar las labores del administrador de un data center.
+
+Cada una de las herramientas debe desplegar un menú interactivo con las siguientes opciones:
+
+1. **Usuarios del Sistema:** Desplegar los usuarios creados en el sistema, junto con la fecha y hora de su último ingreso ( *login* ).
+2. **Uso de Discos:** Desplegar los *filesystems* o discos conectados a la máquina. Incluir para cada disco su tamaño total y la cantidad de espacio libre (ambos valores en  **bytes** ).
+3. **Top 10 Archivos Grandes:** Desplegar el nombre y el tamaño de los **diez archivos más grandes** almacenados en un disco o *filesystem* que el usuario deberá especificar. Los archivos deben aparecer con su trayectoria (ruta) completa.
+4. **Estado de Memoria:** Mostrar la cantidad de memoria libre y la cantidad de espacio de *swap* en uso (especificando tanto en **bytes** como en  **porcentaje** ).
+5. **Copia de Seguridad (Backup):** Hacer un *backup* de un directorio especificado a una memoria USB. Además de respaldar los archivos, se debe generar y almacenar un catálogo que contenga los nombres de los archivos y su fecha de última modificación.
+
+## Metodología y Equipos
+
+* **Formato:** El proyecto se debe realizar en equipos de  **máximo tres personas** .
+* **Soporte:** El profesor actuará como usuario de las aplicaciones y responderá preguntas relacionadas con las mismas en horas de oficina.
+
+## Fechas de Sustentación y Entrega
+
+> **Nota:** El proyecto debe entregarse debidamente documentado en  **GitHub** . Próximamente se publicará un enlace de *Calendly* para que cada equipo reserve su turno de sustentación.
+
+Las jornadas de presentación se realizarán en las siguientes fechas (en horas de la mañana):
+
+| **Grupo**   | **Horario Habitual** | **Fecha de Sustentación** |
+| ----------------- | -------------------------- | -------------------------------- |
+| **Grupo 3** | 11:00 AM                   | **9 de Junio, 2026**       |
+| **Grupo 5** | 02:00 PM                   | **11 de Junio, 2026**      |
