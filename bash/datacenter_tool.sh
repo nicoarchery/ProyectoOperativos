@@ -380,7 +380,7 @@ main() {
 
     while true; do
         show_menu
-        read -r -p " Seleccione una opción [0-5]: " opcion
+        read -r -p " Seleccione una opción [1-5]: " opcion
         echo
 
         case "$opcion" in
