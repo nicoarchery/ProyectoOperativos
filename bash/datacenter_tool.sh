@@ -89,6 +89,51 @@ option_2() {
     echo
 }
 
+option_3() {
+    echo "=============================================="
+    echo " 10 ARCHIVOS MÁS GRANDES"
+    echo "=============================================="
+
+    local target
+    read -r -p "Ingrese el punto de montaje o directorio a analizar: " target
+
+    if [[ -z "$target" ]]; then
+        echo "Error: debe ingresar una ruta." >&2
+        echo
+        return 1
+    fi
+
+    if [[ ! -d "$target" ]]; then
+        echo "Error: '$target' no existe o no es un directorio." >&2
+        echo
+        return 1
+    fi
+
+    target=$(realpath -m "$target" 2>/dev/null || printf "%s" "$target")
+
+    echo
+    echo "Buscando archivos en: $target"
+    echo "Esto puede tardar si el filesystem contiene muchos archivos."
+    echo
+
+    printf "%-6s %-18s %s\n" "No." "TAMAÑO" "RUTA COMPLETA"
+    echo "----------------------------------------------"
+
+    local count=0
+    while IFS=$'\t' read -r -d '' size path; do
+        count=$((count + 1))
+        printf "%-6d %-18s %s\n" "$count" "$(format_bytes "$size")" "$path"
+    done < <(find "$target" -xdev -type f -printf '%s\t%p\0' 2>/dev/null | sort -z -nr | head -z -n 10)
+
+    if [[ "$count" -eq 0 ]]; then
+        echo "No se encontraron archivos regulares en la ruta indicada."
+    fi
+
+    echo "----------------------------------------------"
+    echo
+    return 0
+}
+
 option_4() {
     echo "=============================================="
     echo " MEMORIA LIBRE Y SWAP"
@@ -136,51 +181,6 @@ option_4() {
 
     echo "----------------------------------------------"
     echo
-}
-
-option_3() {
-    echo "=============================================="
-    echo " 10 ARCHIVOS MÁS GRANDES"
-    echo "=============================================="
-
-    local target
-    read -r -p "Ingrese el punto de montaje o directorio a analizar: " target
-
-    if [[ -z "$target" ]]; then
-        echo "Error: debe ingresar una ruta." >&2
-        echo
-        return 1
-    fi
-
-    if [[ ! -d "$target" ]]; then
-        echo "Error: '$target' no existe o no es un directorio." >&2
-        echo
-        return 1
-    fi
-
-    target=$(realpath -m "$target" 2>/dev/null || printf "%s" "$target")
-
-    echo
-    echo "Buscando archivos en: $target"
-    echo "Esto puede tardar si el filesystem contiene muchos archivos."
-    echo
-
-    printf "%-6s %-18s %s\n" "No." "TAMAÑO" "RUTA COMPLETA"
-    echo "----------------------------------------------"
-
-    local count=0
-    while IFS=$'\t' read -r -d '' size path; do
-        count=$((count + 1))
-        printf "%-6d %-18s %s\n" "$count" "$(format_bytes "$size")" "$path"
-    done < <(find "$target" -xdev -type f -printf '%s\t%p\0' 2>/dev/null | sort -z -nr | head -z -n 10)
-
-    if [[ "$count" -eq 0 ]]; then
-        echo "No se encontraron archivos regulares en la ruta indicada."
-    fi
-
-    echo "----------------------------------------------"
-    echo
-    return 0
 }
 
 csv_escape() {

@@ -472,7 +472,7 @@ function Invoke-Option5 {
 function Main {
     do {
         Show-Menu
-        $opcion = Read-Host " Seleccione una opcion [0-5]"
+        $opcion = Read-Host " Seleccione una opcion [1-5]"
         Write-Host ""
 
         switch ($opcion) {
