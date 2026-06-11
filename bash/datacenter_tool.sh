@@ -2,6 +2,19 @@
 
 readonly SCRIPT_VERSION="1.0.0"
 
+format_bytes() {
+    local bytes=$1
+    if [[ "$bytes" -ge 1073741824 ]]; then
+        local gb=$((bytes / 1073741824))
+        local dec=$(( (bytes % 1073741824) * 100 / 1073741824 ))
+        printf "%d.%02d GB" "$gb" "$dec"
+    else
+        local mb=$((bytes / 1048576))
+        local dec=$(( (bytes % 1048576) * 100 / 1048576 ))
+        printf "%d.%02d MB" "$mb" "$dec"
+    fi
+}
+
 show_menu() {
     echo "=============================================="
     echo " Data Center Administration Tool - BASH v$SCRIPT_VERSION"
@@ -55,25 +68,22 @@ option_2() {
     echo "=============================================="
     echo " FILESYSTEMS / DISCOS CONECTADOS"
     echo "=============================================="
-    printf "%-25s %-18s %-18s %s\n" "FILESYSTEM" "TAMAÑO (bytes)" "ESPACIO LIBRE" "MONTADO EN"
+    printf "%-25s %-18s %-18s %s\n" "FILESYSTEM" "TAMAÑO" "ESPACIO LIBRE" "MONTADO EN"
     echo "----------------------------------------------"
 
-    df -B1 -x tmpfs -x devtmpfs -x efivarfs -x overlay 2>/dev/null | tail -n +2 | while IFS= read -r line; do
+    declare -A seen
+    while IFS= read -r line; do
         local fs size used avail use_pct mount
         read -r fs size used avail use_pct mount <<< "$line"
 
-        if [[ -n "$mount" && "$mount" != /* ]]; then
-            local rest
-            read -r rest <<< "$line"
-            continue
-        fi
+        [[ "$fs" == "Filesystem" ]] && continue
+        [[ -z "$mount" || "$mount" != /* ]] && continue
+        [[ "$fs" == "none" || "$fs" == "tmpfs" || "$fs" == "devtmpfs" ]] && continue
+        [[ -n "${seen[$fs]}" ]] && continue
+        seen["$fs"]=1
 
-        if [[ "$fs" == "none" || "$fs" == "tmpfs" || "$fs" == "devtmpfs" ]]; then
-            continue
-        fi
-
-        printf "%-25s %'18d %'18d %s\n" "$fs" "$size" "$avail" "$mount"
-    done
+        printf "%-25s %-18s %-18s %s\n" "$fs" "$(format_bytes "$size")" "$(format_bytes "$avail")" "$mount"
+    done < <(df -B1 -x tmpfs -x devtmpfs -x efivarfs -x overlay 2>/dev/null)
 
     echo "----------------------------------------------"
     echo
@@ -113,15 +123,15 @@ option_4() {
     fi
 
     echo " MEMORIA RAM"
-    echo "  Total:  $(numfmt --to=iec "$mem_total_bytes")  ($(printf "%'d" "$mem_total_bytes") bytes)"
-    echo "  Libre:  $(numfmt --to=iec "$mem_free_bytes")  ($(printf "%'d" "$mem_free_bytes") bytes)"
-    echo "  Usado:  $(numfmt --to=iec "$mem_used_bytes")  ($(printf "%'d" "$mem_used_bytes") bytes)  ($mem_used_pct%)"
+    echo "  Total:  $(format_bytes "$mem_total_bytes")"
+    echo "  Libre:  $(format_bytes "$mem_free_bytes")"
+    echo "  Usado:  $(format_bytes "$mem_used_bytes")  ($mem_used_pct%)"
     echo
 
     echo " SWAP"
-    echo "  Total:  $(numfmt --to=iec "$swap_total_bytes")  ($(printf "%'d" "$swap_total_bytes") bytes)"
-    echo "  Libre:  $(numfmt --to=iec "$swap_free_bytes")  ($(printf "%'d" "$swap_free_bytes") bytes)"
-    echo "  Usado:  $(numfmt --to=iec "$swap_used_bytes")  ($(printf "%'d" "$swap_used_bytes") bytes)  ($swap_used_pct%)"
+    echo "  Total:  $(format_bytes "$swap_total_bytes")"
+    echo "  Libre:  $(format_bytes "$swap_free_bytes")"
+    echo "  Usado:  $(format_bytes "$swap_used_bytes")  ($swap_used_pct%)"
     echo
 
     echo "----------------------------------------------"
@@ -155,13 +165,13 @@ option_3() {
     echo "Esto puede tardar si el filesystem contiene muchos archivos."
     echo
 
-    printf "%-6s %-18s %s\n" "No." "TAMAÑO (bytes)" "RUTA COMPLETA"
+    printf "%-6s %-18s %s\n" "No." "TAMAÑO" "RUTA COMPLETA"
     echo "----------------------------------------------"
 
     local count=0
     while IFS=$'\t' read -r -d '' size path; do
         count=$((count + 1))
-        printf "%-6d %'18d %s\n" "$count" "$size" "$path"
+        printf "%-6d %-18s %s\n" "$count" "$(format_bytes "$size")" "$path"
     done < <(find "$target" -xdev -type f -printf '%s\t%p\0' 2>/dev/null | sort -z -nr | head -z -n 10)
 
     if [[ "$count" -eq 0 ]]; then

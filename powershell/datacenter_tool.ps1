@@ -7,11 +7,8 @@ $ScriptVersion = "1.0.0"
 
 function Format-Bytes {
     param([long]$Bytes)
-    if ($Bytes -ge 1TB) { return "{0:N2} TB" -f ($Bytes / 1TB) }
     if ($Bytes -ge 1GB) { return "{0:N2} GB" -f ($Bytes / 1GB) }
-    if ($Bytes -ge 1MB) { return "{0:N2} MB" -f ($Bytes / 1MB) }
-    if ($Bytes -ge 1KB) { return "{0:N2} KB" -f ($Bytes / 1KB) }
-    return "$Bytes B"
+    return "{0:N2} MB" -f ($Bytes / 1MB)
 }
 
 function ConvertFrom-DmtfDate {
@@ -56,32 +53,29 @@ function Invoke-Option1 {
     Write-Host ("=" * 48)
     Write-Host " USUARIOS DEL SISTEMA Y ULTIMO LOGIN"
     Write-Host ("=" * 48)
-    Write-Host ("{0,-25} {1,-22} {2}" -f "USUARIO", "ULTIMO LOGIN", "PUERTO/SESION")
+    Write-Host ("{0,-25} {1,-22}" -f "USUARIO", "ULTIMO LOGIN")
     Write-Host ("-" * 48)
 
     try {
-        $localUsers = Get-LocalUser -ErrorAction Stop | Where-Object Enabled
-        $wmiUsers = @{}
-        Get-CimInstance -ClassName Win32_UserAccount -ErrorAction SilentlyContinue | ForEach-Object {
-            $wmiUsers[$_.Name] = $_
-        }
+        $loginProfiles = @{}
+        Get-CimInstance -ClassName Win32_NetworkLoginProfile -ErrorAction SilentlyContinue |
+            ForEach-Object { $loginProfiles[$_.Name] = $_.LastLogon }
 
-        foreach ($u in $localUsers) {
-            $rid = Get-UserRid $u.SID.Value
+        $users = Get-CimInstance -ClassName Win32_UserAccount -Filter "LocalAccount=True" -ErrorAction SilentlyContinue
+
+        foreach ($u in $users) {
+            $rid = Get-UserRid $u.SID
             if ($rid -lt 1000 -or $rid -ge 65534) { continue }
 
-            $wmi = $wmiUsers[$u.Name]
-            if (-not $wmi) { continue }
-
-            $lastLogon = ConvertFrom-DmtfDate $wmi.LastLogon
-            if ($lastLogon) {
-                $lastLogonStr = $lastLogon.ToString("yyyy-MM-dd HH:mm:ss")
-            }
-            else {
-                $lastLogonStr = "Nunca ingreso"
+            $lastLogonStr = "Nunca ingreso"
+            if ($loginProfiles.ContainsKey($u.Name)) {
+                $lastLogon = ConvertFrom-DmtfDate $loginProfiles[$u.Name]
+                if ($lastLogon) {
+                    $lastLogonStr = $lastLogon.ToString("yyyy-MM-dd HH:mm:ss")
+                }
             }
 
-            Write-Host ("{0,-25} {1,-22} {2}" -f $u.Name, $lastLogonStr, "-")
+            Write-Host ("{0,-25} {1,-22}" -f $u.Name, $lastLogonStr)
         }
     }
     catch {
@@ -101,18 +95,21 @@ function Invoke-Option2 {
     Write-Host ("=" * 48)
 
     try {
-        $disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction Stop |
+        $allDisks = Get-CimInstance -ClassName Win32_LogicalDisk -ErrorAction Stop |
+            Where-Object { $_.DriveType -eq 2 -or $_.DriveType -eq 3 } |
             Sort-Object DeviceID
 
-        Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMANO (bytes)", "ESPACIO LIBRE", "ETIQUETA")
+        Write-Host ""
+        Write-Host " (*) Discos locales y extraibles:"
+        Write-Host ("{0,-12} {1,-22} {2,-22} {3}" -f "DISCO", "TAMANO", "ESPACIO LIBRE", "TIPO")
         Write-Host ("-" * 72)
 
-        foreach ($d in $disks) {
-            $size  = if ($d.Size)  { $d.Size.ToString("N0") }  else { "N/A" }
-            $free  = if ($d.FreeSpace) { $d.FreeSpace.ToString("N0") } else { "N/A" }
-            $label = if ($d.VolumeName) { $d.VolumeName } else { "-" }
+        foreach ($d in $allDisks) {
+            $size  = if ($d.Size)  { Format-Bytes $d.Size }  else { "N/A" }
+            $free  = if ($d.FreeSpace) { Format-Bytes $d.FreeSpace } else { "N/A" }
+            $tipo  = if ($d.DriveType -eq 2) { "USB/Removable" } else { "Local" }
 
-            Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "$($d.DeviceID)\", $size, $free, $label)
+            Write-Host ("{0,-12} {1,-22} {2,-22} {3}" -f "$($d.DeviceID)\", $size, $free, $tipo)
         }
 
         Write-Host ""
@@ -120,13 +117,13 @@ function Invoke-Option2 {
 
         $netDrives = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=4" -ErrorAction SilentlyContinue
         if ($netDrives) {
-            Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "DISCO", "TAMANO (bytes)", "ESPACIO LIBRE", "RUTA")
+            Write-Host ("{0,-12} {1,-22} {2,-22} {3}" -f "DISCO", "TAMANO", "ESPACIO LIBRE", "RUTA")
             Write-Host ("-" * 72)
             foreach ($d in $netDrives) {
-                $size  = if ($d.Size)  { $d.Size.ToString("N0") }  else { "N/A" }
-                $free  = if ($d.FreeSpace) { $d.FreeSpace.ToString("N0") } else { "N/A" }
+                $size  = if ($d.Size)  { Format-Bytes $d.Size }  else { "N/A" }
+                $free  = if ($d.FreeSpace) { Format-Bytes $d.FreeSpace } else { "N/A" }
                 $path  = if ($d.ProviderName) { $d.ProviderName } else { "-" }
-                Write-Host ("{0,-12} {1,-20} {2,-20} {3}" -f "$($d.DeviceID)\", $size, $free, $path)
+                Write-Host ("{0,-12} {1,-22} {2,-22} {3}" -f "$($d.DeviceID)\", $size, $free, $path)
             }
         }
         else {
@@ -168,7 +165,7 @@ function Invoke-Option3 {
     Write-Host "Esto puede tardar si el filesystem contiene muchos archivos."
     Write-Host ""
 
-    Write-Host ("{0,-6} {1,-20} {2}" -f "No.", "TAMANO (bytes)", "RUTA COMPLETA")
+    Write-Host ("{0,-6} {1,-22} {2}" -f "No.", "TAMANO", "RUTA COMPLETA")
     Write-Host ("-" * 80)
 
     try {
@@ -183,7 +180,7 @@ function Invoke-Option3 {
             $count = 0
             foreach ($f in $files) {
                 $count++
-                Write-Host ("{0,-6} {1,-20} {2}" -f $count, $f.Length.ToString("N0"), $f.FullName)
+                Write-Host ("{0,-6} {1,-22} {2}" -f $count, (Format-Bytes $f.Length), $f.FullName)
             }
         }
     }
@@ -225,16 +222,16 @@ function Invoke-Option4 {
 
         Write-Host ""
         Write-Host " MEMORIA RAM"
-        Write-Host ("  Total:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $totalMem), $totalMem)
-        Write-Host ("  Libre:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $freeMem),  $freeMem)
-        Write-Host ("  Usado:  {0,-16} ({1,15:N0} bytes)  ({2,5:N1}%)" -f (Format-Bytes $usedMem), $usedMem, $usedMemPct)
+        Write-Host "  Total:  $(Format-Bytes $totalMem)"
+        Write-Host "  Libre:  $(Format-Bytes $freeMem)"
+        Write-Host ("  Usado:  {0}  ({1,5:N1}%)" -f (Format-Bytes $usedMem), $usedMemPct)
 
         Write-Host ""
         Write-Host " SWAP (Archivo de paginacion)"
         if ($totalSwap -gt 0) {
-            Write-Host ("  Total:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $totalSwap), $totalSwap)
-            Write-Host ("  Libre:  {0,-16} ({1,15:N0} bytes)" -f (Format-Bytes $freeSwap),  $freeSwap)
-            Write-Host ("  Usado:  {0,-16} ({1,15:N0} bytes)  ({2,5:N1}%)" -f (Format-Bytes $usedSwap), $usedSwap, $usedSwapPct)
+            Write-Host "  Total:  $(Format-Bytes $totalSwap)"
+            Write-Host "  Libre:  $(Format-Bytes $freeSwap)"
+            Write-Host ("  Usado:  {0}  ({1,5:N1}%)" -f (Format-Bytes $usedSwap), $usedSwapPct)
         }
         else {
             Write-Host "  No hay archivo de paginacion configurado."
@@ -261,41 +258,75 @@ function Invoke-Option4 {
 # --- Opcion 5: Backup a USB --------------------------------------------------
 
 function Get-UsbMountPoints {
-    $result = @()
+    $result = [System.Collections.ArrayList]@()
+    $seen = @{}
 
+    # 1) Get-Disk (requiere admin)
     $usbDisks = Get-Disk -ErrorAction SilentlyContinue | Where-Object BusType -eq 'USB'
     foreach ($disk in $usbDisks) {
         $partitions = $disk | Get-Partition -ErrorAction SilentlyContinue
         foreach ($part in $partitions) {
             $volume = $part | Get-Volume -ErrorAction SilentlyContinue
             if ($volume.DriveLetter -and $volume.Size -gt 0) {
-                $mountPoint = "$($volume.DriveLetter):\"
-                $result += [PSCustomObject]@{
-                    MountPoint  = $mountPoint
-                    DiskNumber  = $disk.Number
-                    SizeBytes   = $volume.Size
-                    SizeStr     = Format-Bytes $volume.Size
-                    DriveLetter = $volume.DriveLetter
+                $letter = "$($volume.DriveLetter)"
+                if (-not $seen.ContainsKey($letter)) {
+                    $seen[$letter] = $true
+                    $null = $result.Add([PSCustomObject]@{
+                        MountPoint  = "$($letter):\"
+                        DiskNumber  = $disk.Number
+                        SizeBytes   = $volume.Size
+                        SizeStr     = Format-Bytes $volume.Size
+                        DriveLetter = $letter
+                    })
                 }
             }
         }
     }
 
-    if (-not $result) {
-        $removable = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=2" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Size -and $_.Size -gt 0 }
-        foreach ($d in $removable) {
-            $result += [PSCustomObject]@{
+    # 2) Win32_LogicalDisk DriveType=2 (Removable) — metodo mas confiable sin admin
+    $removable = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=2" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Size -and $_.Size -gt 0 }
+    foreach ($d in $removable) {
+        $letter = $d.DeviceID.TrimEnd(':')
+        if (-not $seen.ContainsKey($letter)) {
+            $seen[$letter] = $true
+            $null = $result.Add([PSCustomObject]@{
                 MountPoint  = "$($d.DeviceID)\"
                 DiskNumber  = -1
                 SizeBytes   = $d.Size
                 SizeStr     = Format-Bytes $d.Size
-                DriveLetter = $d.DeviceID.TrimEnd(':')
+                DriveLetter = $letter
+            })
+        }
+    }
+
+    # 3) Win32_DiskDrive con InterfaceType='USB' via CIM association (USB HDDs DriveType=3)
+    $usbDrives = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue |
+        Where-Object { $_.InterfaceType -eq 'USB' }
+
+    foreach ($drive in $usbDrives) {
+        $parts = Get-CimAssociatedInstance -InputObject $drive -Association Win32_DiskDriveToDiskPartition -ErrorAction SilentlyContinue
+        foreach ($part in $parts) {
+            $logs = Get-CimAssociatedInstance -InputObject $part -Association Win32_LogicalDiskToPartition -ErrorAction SilentlyContinue
+            foreach ($ld in $logs) {
+                if ($ld.Size -and $ld.Size -gt 0) {
+                    $letter = $ld.DeviceID.TrimEnd(':')
+                    if (-not $seen.ContainsKey($letter)) {
+                        $seen[$letter] = $true
+                        $null = $result.Add([PSCustomObject]@{
+                            MountPoint  = "$($ld.DeviceID)\"
+                            DiskNumber  = $drive.Index
+                            SizeBytes   = $ld.Size
+                            SizeStr     = Format-Bytes $ld.Size
+                            DriveLetter = $letter
+                        })
+                    }
+                }
             }
         }
     }
 
-    return $result
+    return $result.ToArray()
 }
 
 function Select-UsbMount {
@@ -305,11 +336,13 @@ function Select-UsbMount {
 
     $usbEntries = Get-UsbMountPoints
 
-    if ($usbEntries.Count -eq 0) {
+    if (-not $usbEntries) {
         Write-Host "Error: no se encontraron dispositivos USB montados." -ForegroundColor Red
         Write-Host "Conecte una memoria USB antes de ejecutar el backup." -ForegroundColor Red
         return $false
     }
+
+    if ($usbEntries -isnot [array]) { $usbEntries = @($usbEntries) }
 
     if ($usbEntries.Count -eq 1) {
         $script:SelectedUsbMount  = $usbEntries[0].MountPoint
@@ -325,8 +358,9 @@ function Select-UsbMount {
     }
 
     $choice = Read-Host ("Seleccione el destino [1-{0}]" -f $usbEntries.Count)
-    $parsed = [int]::TryParse($choice, [ref]0)
-    $index = if ($parsed) { [int]$choice - 1 } else { -1 }
+    $parsedValue = 0
+    $parsed = [int]::TryParse($choice, [ref]$parsedValue)
+    $index = if ($parsed) { $parsedValue - 1 } else { -1 }
 
     if ($index -lt 0 -or $index -ge $usbEntries.Count) {
         Write-Host "Error: seleccion invalida." -ForegroundColor Red
@@ -397,7 +431,7 @@ function Invoke-Option5 {
     Write-Host ""
     Write-Host "Copiando archivos..."
     try {
-        Copy-Item -Path "$sourceDir\*" -Destination $backupData -Recurse -Container -ErrorAction Stop
+        Get-ChildItem -LiteralPath $sourceDir | Copy-Item -Destination $backupData -Recurse -Container -ErrorAction Stop
     }
     catch {
         Write-Host "Error: fallo la copia de archivos: $($_.Exception.Message)" -ForegroundColor Red
