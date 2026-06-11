@@ -208,18 +208,6 @@ function Invoke-Option4 {
         $usedMem   = $totalMem - $freeMem
         $usedMemPct = if ($totalMem -gt 0) { [math]::Round(($usedMem / $totalMem) * 100, 1) } else { 0 }
 
-        $totalVirt = [long]$os.TotalVirtualMemorySize * 1KB
-        $freeVirt  = [long]$os.FreeVirtualMemory     * 1KB
-
-        $totalSwap = $totalVirt - $totalMem
-        $freeSwap  = $freeVirt - $freeMem
-        if ($totalSwap -le 0 -or $freeSwap -gt $totalSwap) {
-            $totalSwap = 0
-            $freeSwap  = 0
-        }
-        $usedSwap   = $totalSwap - $freeSwap
-        $usedSwapPct = if ($totalSwap -gt 0) { [math]::Round(($usedSwap / $totalSwap) * 100, 1) } else { 0 }
-
         Write-Host ""
         Write-Host " MEMORIA RAM"
         Write-Host "  Total:  $(Format-Bytes $totalMem)"
@@ -228,20 +216,28 @@ function Invoke-Option4 {
 
         Write-Host ""
         Write-Host " SWAP (Archivo de paginacion)"
-        if ($totalSwap -gt 0) {
+        $pageFiles = Get-CimInstance -ClassName Win32_PageFileUsage -ErrorAction Stop
+        if (-not $pageFiles -or ($pageFiles -isnot [array] -and $pageFiles.AllocatedBaseSize -le 0) -or ($pageFiles -is [array] -and ($pageFiles | Measure-Object AllocatedBaseSize -Sum).Sum -le 0)) {
+            Write-Host "  No hay archivo de paginacion configurado."
+        }
+        else {
+            if ($pageFiles -is [array]) {
+                $totalSwap = ($pageFiles | Measure-Object AllocatedBaseSize -Sum).Sum * 1MB
+                $usedSwap  = ($pageFiles | Measure-Object CurrentUsage -Sum).Sum * 1MB
+            }
+            else {
+                $totalSwap = $pageFiles.AllocatedBaseSize * 1MB
+                $usedSwap  = $pageFiles.CurrentUsage * 1MB
+            }
+            $freeSwap = $totalSwap - $usedSwap
+            $usedSwapPct = if ($totalSwap -gt 0) { [math]::Round(($usedSwap / $totalSwap) * 100, 1) } else { 0 }
             Write-Host "  Total:  $(Format-Bytes $totalSwap)"
             Write-Host "  Libre:  $(Format-Bytes $freeSwap)"
             Write-Host ("  Usado:  {0}  ({1,5:N1}%)" -f (Format-Bytes $usedSwap), $usedSwapPct)
-        }
-        else {
-            Write-Host "  No hay archivo de paginacion configurado."
-        }
 
-        Write-Host ""
-        Write-Host " DETALLE ADICIONAL"
-        $pageFiles = Get-CimInstance -ClassName Win32_PageFileUsage -ErrorAction SilentlyContinue
-        if ($pageFiles) {
-            foreach ($pf in $pageFiles) {
+            Write-Host ""
+            Write-Host " DETALLE ADICIONAL"
+            foreach ($pf in @($pageFiles)) {
                 Write-Host ("  {0,-40} Inicial: {1,8:N0} MB  Uso actual: {2,8:N0} MB" -f $pf.Name, $pf.AllocatedBaseSize, $pf.CurrentUsage)
             }
         }
@@ -472,7 +468,7 @@ function Invoke-Option5 {
 function Main {
     do {
         Show-Menu
-        $opcion = Read-Host " Seleccione una opcion [1-5]"
+        $opcion = Read-Host " Seleccione una opcion [0-5]"
         Write-Host ""
 
         switch ($opcion) {
